@@ -15,9 +15,7 @@ let botActive = true;
 const blockedUsers = new Set();
 const mediaStore = new Map();
 
-// ===============
-// 🧩 Utility
-// ===============
+// ===== Utility =====
 function generateToken(length = 4) {
   return crypto.randomBytes(length).toString('hex');
 }
@@ -39,9 +37,7 @@ async function sendSafeMessage(userId, message, extra = {}) {
   }
 }
 
-// ===============
-// 🏠 Main Menu
-// ===============
+// ===== Menu Utama =====
 async function showMainMenu(ctx) {
   const markup = Markup.keyboard([
     ['📊 Rate Pap', '📸 Kirim Pap'],
@@ -49,20 +45,16 @@ async function showMainMenu(ctx) {
     ['🎥 Beli Video Premium']
   ]).resize();
 
-  await ctx.reply('Selamat datang! Pilih opsi di bawah:', markup);
+  await ctx.reply('Selamat datang! Pilih menu di bawah ini:', markup);
 }
 
-// ===============
-// 🚀 Start
-// ===============
+// ===== Start =====
 bot.start(async (ctx) => {
   ctx.session = {};
   await showMainMenu(ctx);
 });
 
-// ===============
-// 📸 Kirim Pap
-// ===============
+// ===== Menu Kirim Pap =====
 bot.hears('📸 Kirim Pap', async (ctx) => {
   ctx.session.state = 'kirimPap';
   await ctx.reply('Ingin kirim pap sebagai?', Markup.keyboard([
@@ -92,7 +84,7 @@ bot.hears('🪪 Identitas', async (ctx) => {
   }
 });
 
-// Kirim media
+// ===== Kirim Media =====
 bot.on(['photo', 'video', 'document'], async (ctx) => {
   const sess = ctx.session.kirimPap;
   if (!sess || sess.status !== 'menunggu_media')
@@ -122,15 +114,13 @@ bot.on(['photo', 'video', 'document'], async (ctx) => {
 
   ctx.session.kirimPap = null;
   await ctx.reply('✅ Media diterima! Token sudah dikirim ke admin.');
-  await sendSafeMessage(ADMIN_ID, `📥 Pap baru dari ${getUserDisplay(ctx.from)}\nToken: \`${token}\``, { parse_mode: 'Markdown' });
-  await sendSafeMessage(PUBLIC_CHANNEL_ID, `📸 Pap baru!\nToken: <code>${token}</code>\nKirim token ini ke bot`, { parse_mode: 'HTML' });
+  await sendSafeMessage(ADMIN_ID, `📥 Pap baru dari ${getUserDisplay(ctx.from)}\n🔐 Token: \`${token}\``, { parse_mode: 'Markdown' });
+  await sendSafeMessage(PUBLIC_CHANNEL_ID, `📸 Pap baru masuk!\n🔐 Token: <code>${token}</code>\n📝 Kirim token ini ke bot`, { parse_mode: 'HTML' });
 
   await showMainMenu(ctx);
 });
 
-// ===============
-// 📊 Rate Pap
-// ===============
+// ===== Rate Pap =====
 bot.hears('📊 Rate Pap', async (ctx) => {
   ctx.session.rating = { stage: 'menunggu_token' };
   await ctx.reply('🔢 Masukkan token pap yang ingin kamu nilai:', Markup.keyboard([
@@ -138,45 +128,55 @@ bot.hears('📊 Rate Pap', async (ctx) => {
   ]).resize());
 });
 
+// ===== Menfes =====
+bot.hears('📨 Menfes', async (ctx) => {
+  ctx.session.state = 'menfes';
+  await ctx.reply('Ingin mengirim menfes sebagai?', Markup.keyboard([
+    ['🙈 Anonim', '🪪 Identitas'],
+    ['🔙 Kembali']
+  ]).resize());
+});
+
+// ===== Beli Video Premium =====
+bot.hears('🎥 Beli Video Premium', async (ctx) => {
+  await ctx.reply(
+    '🎬 Klik tautan di bawah untuk membeli video premium:\n👉 [@vvip_3_bot](https://t.me/vvip_3_bot)',
+    { parse_mode: 'Markdown', disable_web_page_preview: true }
+  );
+});
+
+// ===== Profile =====
+bot.hears('🎭 Profile', async (ctx) => {
+  const userId = ctx.from.id;
+  const username = ctx.from.username ? `@${ctx.from.username}` : ctx.from.first_name;
+  let papCount = 0;
+  for (const [, val] of mediaStore) {
+    if (val.from === userId) papCount++;
+  }
+
+  const width = 400, height = 200;
+  const canvas = createCanvas(width, height);
+  const c = canvas.getContext('2d');
+  c.fillStyle = '#1e293b'; c.fillRect(0, 0, width, height);
+  c.fillStyle = '#fff'; c.font = 'bold 26px Sans-serif'; c.fillText('Profile Card', 20, 40);
+  c.font = '22px Sans-serif'; c.fillText(`User: ${username}`, 20, 90);
+  c.font = '20px Sans-serif'; c.fillText(`Jumlah Pap: ${papCount}`, 20, 130);
+  c.font = 'italic 16px Sans-serif'; c.fillStyle = '#ccc'; c.fillText('Terima kasih sudah aktif!', 20, height - 30);
+  const buffer = canvas.toBuffer();
+
+  await ctx.replyWithPhoto({ source: buffer }, { caption: `✨ Profile ${username}` });
+});
+
+// ===== Pesan Text Umum =====
 bot.on('text', async (ctx) => {
   const text = ctx.message.text.trim();
 
-  // 🔙 Back
   if (text === '🔙 Kembali') {
     ctx.session = {};
     return showMainMenu(ctx);
   }
 
-  // 🔰 Help
-  if (text.toLowerCase() === '/help') {
-    await ctx.reply(`🤖 *Bantuan*\n\n📸 /start - Mulai bot\n📩 /help - Bantuan\n📊 Rate Pap - Nilai pap\n📨 Menfes - Pesan anonim`, { parse_mode: 'Markdown' });
-    return showMainMenu(ctx);
-  }
-
-  // 🧑 Profile Card
-  if (text === '🎭 Profile' || text.toLowerCase() === '/profile') {
-    const userId = ctx.from.id;
-    const username = ctx.from.username ? `@${ctx.from.username}` : ctx.from.first_name;
-    let papCount = 0;
-    for (const [, val] of mediaStore) {
-      if (val.from === userId) papCount++;
-    }
-
-    const width = 400, height = 200;
-    const canvas = createCanvas(width, height);
-    const c = canvas.getContext('2d');
-    c.fillStyle = '#1e293b'; c.fillRect(0, 0, width, height);
-    c.fillStyle = '#fff'; c.font = 'bold 26px Sans-serif'; c.fillText('Profile Card', 20, 40);
-    c.font = '22px Sans-serif'; c.fillText(`User: ${username}`, 20, 90);
-    c.font = '20px Sans-serif'; c.fillText(`Jumlah Pap: ${papCount}`, 20, 130);
-    c.font = 'italic 16px Sans-serif'; c.fillStyle = '#ccc'; c.fillText('Terima kasih sudah aktif!', 20, height - 30);
-    const buffer = canvas.toBuffer();
-
-    await ctx.replyWithPhoto({ source: buffer }, { caption: `✨ Profile ${username}` });
-    return;
-  }
-
-  // Rate token
+  // Token rating
   const rating = ctx.session.rating;
   if (rating?.stage === 'menunggu_token') {
     const data = mediaStore.get(text);
@@ -188,16 +188,17 @@ bot.on('text', async (ctx) => {
     }
 
     if (ctx.from.id === data.from)
-      return ctx.reply('⚠️ Tidak bisa menilai pap sendiri.');
+      return ctx.reply('⚠️ Kamu tidak bisa menilai pap sendiri.');
 
     ctx.session.rating = { stage: 'menunggu_rating', token: text, from: data.from };
+
     const caption = `📸 Pap oleh: *${data.mode}*${data.caption ? `\n📝 ${data.caption}` : ''}`;
-    if (data.fileType === 'photo')
-      await ctx.replyWithPhoto(data.fileId, { caption, parse_mode: 'Markdown' });
-    else if (data.fileType === 'video')
-      await ctx.replyWithVideo(data.fileId, { caption, parse_mode: 'Markdown' });
-    else
-      await ctx.replyWithDocument(data.fileId, { caption, parse_mode: 'Markdown' });
+    const mediaOptions = { caption, parse_mode: 'Markdown', protect_content: true };
+
+    if (data.fileType === 'photo') await ctx.replyWithPhoto(data.fileId, mediaOptions);
+    else if (data.fileType === 'video') await ctx.replyWithVideo(data.fileId, mediaOptions);
+    else await ctx.replyWithDocument(data.fileId, mediaOptions);
+
     return ctx.reply('📝 Ketik angka rating (1–5):');
   }
 
@@ -210,7 +211,7 @@ bot.on('text', async (ctx) => {
     return showMainMenu(ctx);
   }
 
-  // Menfes
+  // Menfes kirim pesan
   if (ctx.session.menfes?.status === 'menunggu_pesan') {
     const pesan = text;
     const mode = ctx.session.menfes.mode;
@@ -225,20 +226,7 @@ bot.on('text', async (ctx) => {
   }
 });
 
-// ===============
-// 📨 Menfes
-// ===============
-bot.hears('📨 Menfes', async (ctx) => {
-  ctx.session.state = 'menfes';
-  await ctx.reply('Ingin kirim menfes sebagai?', Markup.keyboard([
-    ['🙈 Anonim', '🪪 Identitas'],
-    ['🔙 Kembali']
-  ]).resize());
-});
-
-// ===============
-// ⚙️ Admin Commands
-// ===============
+// ===== Admin Commands =====
 bot.command('boton', async (ctx) => {
   if (ctx.from.id !== ADMIN_ID) return;
   botActive = true;
@@ -251,12 +239,9 @@ bot.command('botoff', async (ctx) => {
   await ctx.reply('🤖 Bot dimatikan.');
 });
 
-// ===============
-// 🚦 Launch
-// ===============
-bot.launch().then(() => {
-  console.log('Bot running...');
-}).catch(console.error);
+// ===== Launch Bot =====
+bot.launch().then(() => console.log('✅ Bot is running...')).catch(console.error);
 
+// Graceful shutdown
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
