@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const { createCanvas } = require('canvas');
 
 // Konfigurasi dasar
-const BOT_TOKEN = 'ISI_TOKEN_BOT_KAMU';
+const BOT_TOKEN = '7524016177:AAEDhnG7UZ2n8BL6dXQA66_gi1IzReTazl4';
 const PUBLIC_CHANNEL_ID = '-1002857800900';
 const ADMIN_ID = 6468926488;
 const TOKEN_VALID_MS = 24 * 60 * 60 * 1000; // 24 jam
